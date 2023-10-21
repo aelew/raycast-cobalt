@@ -10,7 +10,7 @@
 </div>
 
 > **Note**  
-> This extension is not created by nor affiliated with [cobalt](https://github.com/wukko/cobalt).
+> This extension is not created by or affiliated with [cobalt](https://github.com/wukko/cobalt).
 
 ## Features
 
