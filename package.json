@@ -40,9 +40,35 @@
       "required": false
     },
     {
+      "name": "filenamePattern",
+      "title": "File name style",
+      "description": "How downloaded files should be named.\n\nClassic: Default file name pattern.\nBasic: Title and basic info in brackets.\nPretty: Title and info in brackets.\nNerdy: Title and all info in brackets.\n\nSome services don't support rich file names and will always use the classic style.",
+      "type": "dropdown",
+      "required": false,
+      "default": "classic",
+      "data": [
+        {
+          "title": "Classic",
+          "value": "classic"
+        },
+        {
+          "title": "Basic",
+          "value": "basic"
+        },
+        {
+          "title": "Pretty",
+          "value": "pretty"
+        },
+        {
+          "title": "Nerdy",
+          "value": "nerdy"
+        }
+      ]
+    },
+    {
       "name": "vimeoDownloadType",
       "title": "Vimeo download type",
-      "description": "Progressive: direct file link to Vimeo's CDN. Max quality is 1080p.\nDash: video and audio are merged into one file. Max quality is 4K.\n\nPick progressive if you want the best editor/player/social media compatibility.\nIf progressive download isn't available, dash is used instead.",
+      "description": "Progressive: Direct file link to Vimeo's CDN. Max quality is 1080p.\nDash: Video and audio are merged into one file. Max quality is 4K.\n\nPick progressive if you want the best editor/player/social media compatibility.\nIf progressive download isn't available, dash is used instead.",
       "type": "dropdown",
       "required": false,
       "default": "progressive",
