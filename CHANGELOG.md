@@ -1,5 +1,9 @@
 # Cobalt Changelog
 
+## [Bug fixes and improvements] - 2024-08-16
+
+- Updated dependencies
+
 ## [Improvements] - 2023-10-30
 
 - Added new `File name style` preference
