@@ -33,14 +33,22 @@
     {
       "name": "apiInstanceUrl",
       "title": "API Instance URL",
-      "description": "Want to use a different Cobalt API instance? Change your instance URL here!",
-      "placeholder": "https://api.cobalt.tools",
-      "default": "https://api.cobalt.tools",
+      "description": "Want to use a different Cobalt API instance? Set your instance URL here!",
+      "placeholder": "https://cobalt.aelew.dev",
+      "default": "https://cobalt.aelew.dev",
       "type": "textfield",
       "required": false
     },
     {
-      "name": "filenamePattern",
+      "name": "apiInstanceKey",
+      "title": "API Instance Key",
+      "description": "If the instance you are using requires an API key, enter it here.",
+      "placeholder": "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx",
+      "type": "password",
+      "required": false
+    },
+    {
+      "name": "filenameStyle",
       "title": "File Name Style",
       "description": "How downloaded files should be named.\n\nClassic: Default file name pattern.\nBasic: Title and basic info in brackets.\nPretty: Title and info in brackets.\nNerdy: Title and all info in brackets.\n\nSome services don't support rich file names and will always use the classic style.",
       "type": "dropdown",
@@ -74,9 +82,23 @@
       "default": true
     },
     {
-      "name": "muteVideoAudio",
-      "label": "Mute Video Audio",
-      "description": "Removes the audio from video downloads when possible.",
+      "name": "alwaysProxy",
+      "label": "Always Proxy",
+      "description": "Tunnels all downloads through the processing server, even when not necessary.",
+      "type": "checkbox",
+      "required": false
+    },
+    {
+      "name": "disableMetadata",
+      "label": "Disable Metadata",
+      "description": "Disables the addition of file metadata.",
+      "type": "checkbox",
+      "required": false
+    },
+    {
+      "name": "youtubeHLS",
+      "label": "YouTube: Use HLS",
+      "description": "Whether to use HLS when downloading video or audio from YouTube.",
       "type": "checkbox",
       "required": false
     },
@@ -88,7 +110,7 @@
       "required": false
     },
     {
-      "name": "downloadOriginalTikTokSound",
+      "name": "tiktokFullAudio",
       "label": "TikTok: Use Original Audio",
       "description": "Downloads the original sound used in the TikTok video without any additional changes by the post's author.",
       "type": "checkbox",
