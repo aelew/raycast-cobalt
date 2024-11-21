@@ -103,7 +103,7 @@
     }
   ],
   "dependencies": {
-    "@raycast/api": "^1.84.8",
+    "@raycast/api": "^1.86.0",
     "@raycast/utils": "^1.18.0",
     "content-disposition": "^0.5.4"
   },
