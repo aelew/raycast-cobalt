@@ -62,9 +62,11 @@ export default function HistoryCommand() {
   }
 
   async function removeEntry(id: string) {
-    const newHistory = history.filter((entry) => entry.id !== id);
-    setHistory(newHistory);
-    await LocalStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+    setHistory((currentHistory) => {
+      const newHistory = currentHistory.filter((entry) => entry.id !== id);
+      LocalStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+      return newHistory;
+    });
     showToast(Toast.Style.Success, "Entry removed");
   }
 
