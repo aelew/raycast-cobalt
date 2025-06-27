@@ -26,7 +26,7 @@ type Preferences = {
   twitterGif?: boolean;
   tiktokFullAudio?: boolean;
   tiktokH265?: boolean;
-  downloadDirectory?: string;
+  downloadDirectory: string;
   notifyOnDownload?: boolean;
 };
 
