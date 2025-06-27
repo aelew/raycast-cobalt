@@ -15,7 +15,6 @@ import { useForm, runAppleScript } from "@raycast/utils";
 import { mkdir } from "fs/promises";
 import { Readable } from "stream";
 import { useEffect, useState } from "react";
-import fetch from "cross-fetch";
 import path from "path";
 import fs from "fs";
 import type { CobaltRequest, CobaltResponse, FormValues } from "./types";
@@ -26,7 +25,7 @@ import { getServiceFromUrl, generateThumbnail } from "./utils";
 // official cobalt instance URLs that are no longer available
 const oldCobaltInstances = ["https://co.wuk.sh", "https://api.cobalt.tools"];
 
-export default function Command() {
+export default function DownloadCommand() {
   const preferences = getPreferenceValues<Preferences.Index>();
   const [loading, setLoading] = useState(false);
 
@@ -49,15 +48,12 @@ export default function Command() {
 
   const { handleSubmit, itemProps } = useForm<FormValues>({
     onSubmit(formValues) {
-      setLoading(true);
-
       if (!preferences.apiInstanceUrl.trim()) {
         showToast(
           Toast.Style.Failure,
-          "API instance URL not configured",
-          "Please set an API instance URL in preferences",
+          "API Instance URL not configured",
+          "Please set an API Instance URL in preferences.",
         );
-        setLoading(false);
         return;
       }
 
@@ -68,10 +64,15 @@ export default function Command() {
           throw new Error("Invalid protocol");
         }
       } catch {
-        showToast(Toast.Style.Failure, "Invalid API instance URL", "Please check your API instance URL in preferences");
-        setLoading(false);
+        showToast(
+          Toast.Style.Failure,
+          "Invalid API Instance URL",
+          "Please check your API Instance URL in preferences.",
+        );
         return;
       }
+
+      setLoading(true);
 
       const headers: Record<string, string> = {
         Accept: "application/json",
@@ -79,12 +80,10 @@ export default function Command() {
         "Content-Type": "application/json",
       };
 
-      if (preferences.apiInstanceKey) {
-        headers["Authorization"] = `Api-Key ${preferences.apiInstanceKey}`;
-      }
-
       if (preferences.apiInstanceUrl === "https://cobalt.aelew.dev") {
         headers["Authorization"] = "Api-Key 00000000-0000-4000-a000-000000000000";
+      } else if (preferences.apiInstanceKey) {
+        headers["Authorization"] = `Api-Key ${preferences.apiInstanceKey}`;
       }
 
       const body: CobaltRequest = {
@@ -104,8 +103,8 @@ export default function Command() {
         method: "POST",
         headers,
       })
-        .then((response) => response.json())
-        .then(async (result: CobaltResponse) => {
+        .then((response) => response.json() as Promise<CobaltResponse>)
+        .then(async (result) => {
           switch (result.status) {
             case "tunnel":
             case "redirect":
@@ -144,6 +143,7 @@ export default function Command() {
                 audioFormat: body.audioFormat,
                 status: "failed",
                 errorMessage: errorMessage,
+                thumbnailUrl: null,
               });
 
               showToast(Toast.Style.Failure, errorTitle, errorMessage);
@@ -163,6 +163,7 @@ export default function Command() {
             audioFormat: body.audioFormat,
             status: "failed",
             errorMessage: error.toString(),
+            thumbnailUrl: null,
           });
           showToast(Toast.Style.Failure, "An unexpected error occurred", error.toString());
           setLoading(false);
@@ -205,7 +206,7 @@ export default function Command() {
     }
 
     if (!fs.existsSync(preferences.downloadDirectory)) {
-      await mkdir(preferences.downloadDirectory);
+      await mkdir(preferences.downloadDirectory, { recursive: true });
     }
 
     if (!filename) {
@@ -220,7 +221,7 @@ export default function Command() {
     const destination = path.resolve(preferences.downloadDirectory, filename);
     const writeStream = fs.createWriteStream(destination);
 
-    const body = response.body as unknown as Readable;
+    const body = Readable.fromWeb(response.body);
     let bytes = 0;
 
     const BYTES_PER_MB = 1048576;
@@ -287,6 +288,7 @@ export default function Command() {
         audioFormat: requestBody?.audioFormat,
         status: "failed",
         errorMessage: err.message,
+        thumbnailUrl: null,
       });
     });
   }
@@ -360,7 +362,7 @@ export default function Command() {
         <Form.Dropdown.Item title="wav" value="wav" />
         <Form.Dropdown.Item title="opus" value="opus" />
       </Form.Dropdown>
-      <Form.Description text="Additional options are available in your extension settings." />
+      <Form.Description text="More options are available in your extension settings." />
     </Form>
   );
 }

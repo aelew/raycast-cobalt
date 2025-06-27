@@ -58,7 +58,7 @@ type HistoryEntry = {
   audioFormat?: string;
   status: "completed" | "failed";
   errorMessage?: string;
-  thumbnailUrl?: string;
+  thumbnailUrl: string | null;
 };
 
 export type { CobaltRequest, CobaltResponse, FormValues, HistoryEntry };

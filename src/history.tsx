@@ -95,7 +95,7 @@ export default function HistoryCommand() {
         <List.EmptyView
           icon={Icon.Download}
           title="No downloads yet"
-          description="Your download history will appear here"
+          description="Your download history will appear here."
         />
       </List>
     );

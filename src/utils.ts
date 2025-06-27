@@ -19,7 +19,7 @@ export function getServiceFromUrl(url: string): string {
   }
 }
 
-export async function generateThumbnail(filePath: string): Promise<string | undefined> {
+export async function generateThumbnail(filePath: string) {
   try {
     const ext = path.extname(filePath).toLowerCase();
 
@@ -60,8 +60,8 @@ export async function generateThumbnail(filePath: string): Promise<string | unde
       }
     }
 
-    return undefined;
+    return null;
   } catch {
-    return undefined;
+    return null;
   }
 }
