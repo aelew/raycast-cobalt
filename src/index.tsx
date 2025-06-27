@@ -114,7 +114,7 @@ export default function Command() {
     onSubmit(formValues) {
       setLoading(true);
 
-      if (!preferences.apiInstanceUrl || !preferences.apiInstanceUrl.trim()) {
+      if (!preferences.apiInstanceUrl.trim()) {
         showToast(Toast.Style.Failure, "API instance URL not configured", "Please set an API instance URL in preferences");
         setLoading(false);
         return;
