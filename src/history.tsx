@@ -120,56 +120,53 @@ export default function HistoryCommand() {
     <Grid isLoading={loading} searchBarPlaceholder="Search download history...">
       {Object.entries(groupedHistory).map(([date, entries]) => (
         <Grid.Section key={date} title={date}>
-          {entries.map((entry) => (
-            <Grid.Item
-              key={entry.id}
-              content={getContent(entry)}
-              title={entry.filename}
-              subtitle={getServiceFromUrl(entry.url)}
-              actions={
-                <ActionPanel>
-                                      {entry.status === "completed" && fs.existsSync(entry.downloadPath) && (
-                      <Action.Open
-                        title="Open File"
-                        target={entry.downloadPath}
-                        icon={Icon.Play}
+          {entries.map((entry) => {
+            const entryExists = entry.status === "completed" && fs.existsSync(entry.downloadPath);
+            return (
+              <Grid.Item
+                key={entry.id}
+                content={getContent(entry)}
+                title={entry.filename}
+                subtitle={getServiceFromUrl(entry.url)}
+                actions={
+                  <ActionPanel>
+                    {entryExists && <Action.Open title="Open File" target={entry.downloadPath} icon={Icon.Play} />}
+                    {entryExists && (
+                      <Action.ShowInFinder
+                        title="Show in Finder"
+                        path={entry.downloadPath}
+                        shortcut={Keyboard.Shortcut.Common.Open}
                       />
                     )}
-                  {entry.status === "completed" && fs.existsSync(entry.downloadPath) && (
-                    <Action.ShowInFinder
-                      title="Show in Finder"
-                      path={entry.downloadPath}
-                      shortcut={Keyboard.Shortcut.Common.Open}
+                    <Action.CopyToClipboard
+                      title="Copy URL"
+                      content={entry.url}
+                      shortcut={Keyboard.Shortcut.Common.Copy}
                     />
-                  )}
-                  <Action.CopyToClipboard
-                    title="Copy URL"
-                    content={entry.url}
-                    shortcut={Keyboard.Shortcut.Common.Copy}
-                  />
-                  <Action.CopyToClipboard
-                    title="Copy Filename"
-                    content={entry.filename}
-                    shortcut={Keyboard.Shortcut.Common.CopyName}
-                  />
-                  <Action
-                    title="Remove from History"
-                    icon={Icon.Trash}
-                    style={Action.Style.Destructive}
-                    onAction={() => removeEntry(entry.id)}
-                    shortcut={Keyboard.Shortcut.Common.Remove}
-                  />
-                  <Action
-                    title="Clear All History"
-                    icon={Icon.ExclamationMark}
-                    style={Action.Style.Destructive}
-                    onAction={clearHistory}
-                    shortcut={{ modifiers: ["cmd", "shift"], key: "delete" }}
-                  />
-                </ActionPanel>
-              }
-            />
-          ))}
+                    <Action.CopyToClipboard
+                      title="Copy File Name"
+                      content={entry.filename}
+                      shortcut={Keyboard.Shortcut.Common.CopyName}
+                    />
+                    <Action
+                      title="Remove from History"
+                      icon={Icon.Trash}
+                      style={Action.Style.Destructive}
+                      onAction={() => removeEntry(entry.id)}
+                      shortcut={Keyboard.Shortcut.Common.Remove}
+                    />
+                    <Action
+                      title="Clear All History"
+                      icon={Icon.ExclamationMark}
+                      style={Action.Style.Destructive}
+                      onAction={clearHistory}
+                      shortcut={{ modifiers: ["cmd", "shift"], key: "delete" }}
+                    />
+                  </ActionPanel>
+                }
+              />
+            );
+          })}
         </Grid.Section>
       ))}
     </Grid>
