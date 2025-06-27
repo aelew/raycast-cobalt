@@ -7,6 +7,9 @@ import {
   getPreferenceValues,
   openExtensionPreferences,
   Keyboard,
+  launchCommand,
+  LaunchType,
+  Icon,
 } from "@raycast/api";
 import { runAppleScript, useForm } from "@raycast/utils";
 import { mkdir } from "fs/promises";
@@ -15,11 +18,76 @@ import { useEffect, useState } from "react";
 import fetch from "cross-fetch";
 import path from "path";
 import fs from "fs";
-import type { CobaltRequest, CobaltResponse, FormValues } from "./types";
+import type { CobaltRequest, CobaltResponse, FormValues, Preferences } from "./types";
 import { parse as parseContentDispositionHeader } from "content-disposition";
+import { addToHistory } from "./history";
 
 // official cobalt instance URLs that are no longer available
 const oldCobaltInstances = ["https://co.wuk.sh", "https://api.cobalt.tools"];
+
+function getServiceFromUrl(url: string): string {
+  try {
+    const domain = new URL(url).hostname.toLowerCase();
+    if (domain.includes("youtube.com") || domain.includes("youtu.be")) return "YouTube";
+    if (domain.includes("tiktok.com")) return "TikTok";
+    if (domain.includes("twitter.com") || domain.includes("x.com")) return "Twitter/X";
+    if (domain.includes("instagram.com")) return "Instagram";
+    if (domain.includes("facebook.com")) return "Facebook";
+    if (domain.includes("reddit.com")) return "Reddit";
+    return domain;
+  } catch {
+    return "Unknown";
+  }
+}
+
+async function generateThumbnail(filePath: string): Promise<string | undefined> {
+  try {
+    const ext = path.extname(filePath).toLowerCase();
+    
+    if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
+      return filePath;
+    }
+    
+    if (['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v'].includes(ext)) {
+      const thumbnailDir = path.join(path.dirname(filePath), '.thumbnails');
+      if (!fs.existsSync(thumbnailDir)) {
+        await mkdir(thumbnailDir, { recursive: true });
+      }
+      
+      const thumbnailPath = path.join(thumbnailDir, `${path.basename(filePath, ext)}.jpg`);
+      
+      try {
+        await runAppleScript(`
+          set inputFile to POSIX file "${filePath}"
+          set outputFile to POSIX file "${thumbnailPath}"
+          
+          tell application "System Events"
+            try
+              do shell script "ffmpeg -i " & quoted form of "${filePath}" & " -ss 00:00:01 -vframes 1 -q:v 2 " & quoted form of "${thumbnailPath}" & " 2>/dev/null"
+            on error
+              try
+                do shell script "qlmanage -t -s 512 -o " & quoted form of "${path.dirname(thumbnailPath)}" & " " & quoted form of "${filePath}" & " 2>/dev/null"
+                do shell script "mv " & quoted form of "${path.dirname(thumbnailPath)}/${path.basename(filePath)}.png" & " " & quoted form of "${thumbnailPath}" & " 2>/dev/null"
+              end try
+            end try
+          end tell
+        `);
+        
+        if (fs.existsSync(thumbnailPath)) {
+          return thumbnailPath;
+        }
+      } catch (error) {
+        console.warn("Failed to generate thumbnail:", error);
+      }
+    }
+    
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+
 
 export default function Command() {
   const preferences = getPreferenceValues<Preferences>();
@@ -46,6 +114,24 @@ export default function Command() {
     onSubmit(formValues) {
       setLoading(true);
 
+      if (!preferences.apiInstanceUrl || !preferences.apiInstanceUrl.trim()) {
+        showToast(Toast.Style.Failure, "API instance URL not configured", "Please set an API instance URL in preferences");
+        setLoading(false);
+        return;
+      }
+
+      let apiUrl;
+      try {
+        apiUrl = new URL(preferences.apiInstanceUrl.trim());
+        if (apiUrl.protocol !== "http:" && apiUrl.protocol !== "https:") {
+          throw new Error("Invalid protocol");
+        }
+      } catch {
+        showToast(Toast.Style.Failure, "Invalid API instance URL", "Please check your API instance URL in preferences");
+        setLoading(false);
+        return;
+      }
+
       const headers: Record<string, string> = {
         Accept: "application/json",
         "User-Agent": "raycast-cobalt/20241120",
@@ -56,7 +142,6 @@ export default function Command() {
         headers["Authorization"] = `Api-Key ${preferences.apiInstanceKey}`;
       }
 
-      // this is intentional. cobalt requires an API key to restrict access based on user agent
       if (preferences.apiInstanceUrl === "https://cobalt.aelew.dev") {
         headers["Authorization"] = "Api-Key 00000000-0000-4000-a000-000000000000";
       }
@@ -79,25 +164,65 @@ export default function Command() {
         headers,
       })
         .then((response) => response.json())
-        .then((result: CobaltResponse) => {
+        .then(async (result: CobaltResponse) => {
           switch (result.status) {
             case "tunnel":
             case "redirect":
-              downloadFile(result.url, result.filename);
+              downloadFile(result.url, result.filename, formValues.url, body);
               break;
             case "picker":
-              result.picker.forEach((item) => downloadFile(item.url));
+              result.picker.forEach((item) => downloadFile(item.url, undefined, formValues.url, body));
               if (result.audio) {
-                downloadFile(result.audio, result.audioFilename);
+                downloadFile(result.audio, result.audioFilename, formValues.url, body);
               }
               break;
             case "error":
-              showToast(Toast.Style.Failure, "An unexpected error occurred", result.error.code);
+              const errorCode = result.error.code;
+              let errorTitle = "An unexpected error occurred";
+              let errorMessage = errorCode;
+              
+              if (errorCode === "error.api.youtube.login") {
+                errorTitle = "YouTube access blocked";
+                errorMessage = "YouTube is blocking this API instance. Try a different instance or wait and retry later.";
+
+              } else if (errorCode.startsWith("error.api.youtube")) {
+                errorTitle = "YouTube error";
+                errorMessage = "YouTube is restricting access. This is usually temporary.";
+                
+              } else if (errorCode === "error.api.rate_limit") {
+                errorTitle = "Rate limit exceeded";
+                errorMessage = "Too many requests. Please wait a moment and try again.";
+              }
+              
+              addToHistory({
+                url: formValues.url,
+                filename: "Failed download",
+                downloadPath: "",
+                service: getServiceFromUrl(formValues.url),
+                downloadMode: body.downloadMode || "auto",
+                videoQuality: body.videoQuality,
+                audioFormat: body.audioFormat,
+                status: "failed",
+                errorMessage: errorMessage,
+              });
+              
+              showToast(Toast.Style.Failure, errorTitle, errorMessage);
               setLoading(false);
               break;
           }
         })
         .catch((error) => {
+          addToHistory({
+            url: formValues.url,
+            filename: "Failed download",
+            downloadPath: "",
+            service: getServiceFromUrl(formValues.url),
+            downloadMode: body.downloadMode || "auto",
+            videoQuality: body.videoQuality,
+            audioFormat: body.audioFormat,
+            status: "failed",
+            errorMessage: error.toString(),
+          });
           showToast(Toast.Style.Failure, "An unexpected error occurred", error.toString());
           setLoading(false);
         });
@@ -125,7 +250,7 @@ export default function Command() {
     },
   });
 
-  async function downloadFile(url: string, filename?: string) {
+  async function downloadFile(url: string, filename?: string, originalUrl?: string, requestBody?: CobaltRequest) {
     const toast = await showToast({
       style: Toast.Style.Animated,
       title: "Downloading file",
@@ -138,7 +263,7 @@ export default function Command() {
       return;
     }
 
-    if (!fs.existsSync(preferences.downloadDirectory)) {
+    if (preferences.downloadDirectory && !fs.existsSync(preferences.downloadDirectory)) {
       await mkdir(preferences.downloadDirectory);
     }
 
@@ -151,7 +276,7 @@ export default function Command() {
       }
     }
 
-    const destination = path.resolve(preferences.downloadDirectory, filename);
+    const destination = path.resolve(preferences.downloadDirectory ?? "", filename);
     const writeStream = fs.createWriteStream(destination);
 
     const body = response.body as unknown as Readable;
@@ -166,22 +291,62 @@ export default function Command() {
 
     body.pipe(writeStream);
 
-    writeStream.on("finish", () => {
+    writeStream.on("finish", async () => {
       setLoading(false);
       writeStream.close();
       toast.style = Toast.Style.Success;
       toast.title = "Download complete";
       toast.message = `Saved to ${filename}`;
+      toast.primaryAction = {
+        title: "View in History",
+        shortcut: { modifiers: ["cmd"], key: "h" },
+        onAction: () => {
+          toast.hide();
+          launchCommand({
+            name: "history",
+            type: LaunchType.UserInitiated,
+          }).catch(() => {
+            showToast(Toast.Style.Failure, "Could not open history");
+          });
+        },
+      };
       if (preferences.notifyOnDownload) {
         runAppleScript(`display notification "Downloaded ${filename}!" with title "Cobalt" sound name "Glass"`);
       }
+      
+      const thumbnailPath = await generateThumbnail(destination);
+      
+      addToHistory({
+        url: originalUrl || url,
+        filename,
+        downloadPath: destination,
+        service: getServiceFromUrl(originalUrl || url),
+        downloadMode: requestBody?.downloadMode || "auto",
+        videoQuality: requestBody?.videoQuality,
+        audioFormat: requestBody?.audioFormat,
+        status: "completed",
+        thumbnailUrl: thumbnailPath,
+      });
     });
 
-    writeStream.on("error", (err) => {
+    writeStream.on("error", async (err) => {
       fs.unlinkSync(destination);
       toast.style = Toast.Style.Failure;
       toast.title = err.name;
       toast.message = err.message;
+      setLoading(false);
+      
+      addToHistory({
+        url: originalUrl || url,
+        filename,
+        downloadPath: destination,
+        service: getServiceFromUrl(originalUrl || url),
+        downloadMode: requestBody?.downloadMode || "auto",
+        videoQuality: requestBody?.videoQuality,
+        audioFormat: requestBody?.audioFormat,
+        status: "failed",
+        errorMessage: err.message,
+      });
     });
   }
 
@@ -190,7 +355,17 @@ export default function Command() {
       isLoading={loading}
       actions={
         <ActionPanel>
-          {loading ? null : <Action.SubmitForm title="Start Download" onSubmit={handleSubmit} />}
+          {loading ? null : (
+            <>
+              <Action.SubmitForm title="Start Download" onSubmit={handleSubmit} />
+              <Action 
+                title="View Download History" 
+                icon={Icon.List}
+                shortcut={{ modifiers: ["cmd"], key: "h" }}
+                onAction={() => launchCommand({ name: "history", type: LaunchType.UserInitiated })}
+              />
+            </>
+          )}
         </ActionPanel>
       }
     >
