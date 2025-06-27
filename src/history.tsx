@@ -13,11 +13,10 @@ import {
 } from "@raycast/api";
 import { useState, useEffect } from "react";
 import { LocalStorage } from "@raycast/api";
-import { runAppleScript } from "@raycast/utils";
 import crypto from "crypto";
-import path from "path";
 import fs from "fs";
 import type { HistoryEntry } from "./types";
+import { getServiceFromUrl } from "./utils";
 
 const HISTORY_KEY = "cobalt-download-history";
 const MAX_HISTORY_ENTRIES = 1000;
@@ -70,41 +69,25 @@ export default function HistoryCommand() {
     showToast(Toast.Style.Success, "Entry removed");
   }
 
-  function formatDate(timestamp: number) {
-    return new Date(timestamp).toLocaleString();
-  }
-
-  function getServiceFromUrl(url: string): string {
-    try {
-      const domain = new URL(url).hostname.toLowerCase();
-      if (domain.includes("youtube.com") || domain.includes("youtu.be")) return "YouTube";
-      if (domain.includes("tiktok.com")) return "TikTok";
-      if (domain.includes("twitter.com") || domain.includes("x.com")) return "Twitter/X";
-      if (domain.includes("instagram.com")) return "Instagram";
-      if (domain.includes("facebook.com")) return "Facebook";
-      if (domain.includes("reddit.com")) return "Reddit";
-      return domain;
-    } catch {
-      return "Unknown";
-    }
-  }
-
   function getContent(entry: HistoryEntry) {
     if (entry.thumbnailUrl && fs.existsSync(entry.thumbnailUrl)) {
       return entry.thumbnailUrl;
     }
-    
-    return entry.status === "completed" 
+
+    return entry.status === "completed"
       ? { source: Icon.CheckCircle, tintColor: Color.Green }
       : { source: Icon.XMarkCircle, tintColor: Color.Red };
   }
 
-  const groupedHistory = history.reduce((groups, entry) => {
-    const date = new Date(entry.timestamp).toDateString();
-    if (!groups[date]) groups[date] = [];
-    groups[date].push(entry);
-    return groups;
-  }, {} as Record<string, HistoryEntry[]>);
+  const groupedHistory = history.reduce(
+    (groups, entry) => {
+      const date = new Date(entry.timestamp).toDateString();
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(entry);
+      return groups;
+    },
+    {} as Record<string, HistoryEntry[]>,
+  );
 
   if (history.length === 0) {
     return (
@@ -179,19 +162,19 @@ export async function addToHistory(entry: Omit<HistoryEntry, "id" | "timestamp">
   try {
     const stored = await LocalStorage.getItem<string>(HISTORY_KEY);
     const history: HistoryEntry[] = stored ? JSON.parse(stored) : [];
-    
+
     const newEntry: HistoryEntry = {
       ...entry,
       id: crypto.randomUUID(),
       timestamp: Date.now(),
     };
-    
+
     history.unshift(newEntry);
-    
+
     if (history.length > MAX_HISTORY_ENTRIES) {
       history.splice(MAX_HISTORY_ENTRIES);
     }
-    
+
     await LocalStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   } catch (error) {
     console.error("Failed to add to history:", error);
