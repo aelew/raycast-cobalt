@@ -16,8 +16,6 @@ type CobaltRequest = {
   youtubeHLS?: boolean;
 };
 
-
-
 // https://github.com/imputnet/cobalt/blob/main/docs/api.md#response
 type CobaltResponse =
   | {
