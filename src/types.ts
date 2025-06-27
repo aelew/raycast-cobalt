@@ -16,19 +16,7 @@ type CobaltRequest = {
   youtubeHLS?: boolean;
 };
 
-type Preferences = {
-  apiInstanceUrl: string;
-  apiInstanceKey?: string;
-  filenameStyle?: "classic" | "pretty" | "basic" | "nerdy";
-  alwaysProxy?: boolean;
-  disableMetadata?: boolean;
-  youtubeHLS?: boolean;
-  twitterGif?: boolean;
-  tiktokFullAudio?: boolean;
-  tiktokH265?: boolean;
-  downloadDirectory: string;
-  notifyOnDownload?: boolean;
-};
+
 
 // https://github.com/imputnet/cobalt/blob/main/docs/api.md#response
 type CobaltResponse =
@@ -75,4 +63,4 @@ type HistoryEntry = {
   thumbnailUrl?: string;
 };
 
-export type { CobaltRequest, CobaltResponse, FormValues, Preferences, HistoryEntry };
+export type { CobaltRequest, CobaltResponse, FormValues, HistoryEntry };

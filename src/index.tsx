@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 import fetch from "cross-fetch";
 import path from "path";
 import fs from "fs";
-import type { CobaltRequest, CobaltResponse, FormValues, Preferences } from "./types";
+import type { CobaltRequest, CobaltResponse, FormValues } from "./types";
 import { parse as parseContentDispositionHeader } from "content-disposition";
 import { addToHistory } from "./history";
 import { getServiceFromUrl, generateThumbnail } from "./utils";
@@ -27,7 +27,7 @@ import { getServiceFromUrl, generateThumbnail } from "./utils";
 const oldCobaltInstances = ["https://co.wuk.sh", "https://api.cobalt.tools"];
 
 export default function Command() {
-  const preferences = getPreferenceValues<Preferences>();
+  const preferences = getPreferenceValues<Preferences.Index>();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
